@@ -34,6 +34,24 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <ffmpeg/swscale.h>
 #endif
 
+#if LIBAVCODEC_VERSION_INT <= AV_VERSION_INT(52,24,0)
+/*should work as long as nobody uses avformat.h*/
+typedef struct AVPacket{
+	uint8_t *data;
+	int size;
+}AVPacket;
+
+static inline void av_init_packet(AVPacket *pkt){
+	
+}
+static inline int avcodec_decode_video2(AVCodecContext *avctx, AVFrame *picture,
+                         int *got_picture_ptr,
+                         AVPacket *avpkt){
+	return avcodec_decode_video(avctx,picture, got_picture_ptr,avpkt->data,avpkt->size);
+}
+#endif
+
+
 #define REMOVE_PREVENTING_BYTES 1
 
 typedef struct _EncData{
@@ -98,6 +116,7 @@ static void enc_preprocess(MSFilter *f){
 	params.i_keyint_min = (int)d->fps;
 	*/
 	params.b_repeat_headers=1;
+	params.b_annexb=0;
 
 	//these parameters must be set so that our stream is baseline
 	params.analyse.b_transform_8x8 = 0;
@@ -410,8 +429,8 @@ static bool_t check_sps_pps_change(DecData *d, mblk_t *sps, mblk_t *pps){
 		if (pps){
 			ret2=(msgdsize(pps)!=msgdsize(d->pps)) || (memcmp(d->pps->b_rptr,pps->b_rptr,msgdsize(pps))!=0);
 			if (ret2) {
-				update_sps(d,pps);
 				ms_message("PPS changed ! %i,%i",msgdsize(pps),msgdsize(d->pps));
+				update_pps(d,pps);
 			}
 		}
 	}else if (pps) {
