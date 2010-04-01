@@ -390,7 +390,7 @@ static mblk_t *get_as_yuvmsg(MSFilter *f, DecData *s, AVFrame *orig){
 			ctx->width,ctx->height,PIX_FMT_YUV420P,SWS_FAST_BILINEAR,
                 	NULL, NULL, NULL);
 	}
-	if (sws_scale(s->sws_ctx,orig->data,orig->linesize, 0,
+	if (sws_scale(s->sws_ctx,(const uint8_t * const*)orig->data,orig->linesize, 0,
 					ctx->height, s->outbuf.planes, s->outbuf.strides)<0){
 		ms_error("%s: error in sws_scale().",f->desc->name);
 	}
