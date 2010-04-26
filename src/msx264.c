@@ -585,4 +585,5 @@ static MSFilterDesc h264_dec_desc={
 void libmsx264_init(void){
 	ms_filter_register(&x264_enc_desc);
 	ms_filter_register(&h264_dec_desc);
+	ms_message("ms264-" VERSION " plugin registered.");
 }
