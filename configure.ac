@@ -1,5 +1,5 @@
 dnl Process this file with autoconf to produce a configure script.
-AC_INIT([msx264],[1.3.3])
+AC_INIT([msx264],[1.4.0])
 
 AM_INIT_AUTOMAKE([tar-ustar])
 
@@ -58,32 +58,10 @@ if test $GCC = yes && test $wall_werror = yes;  then
 	CFLAGS="$CFLAGS -Werror "
 fi
 
-PKG_CHECK_MODULES(MEDIASTREAMER, mediastreamer >= 2.1.0)
+PKG_CHECK_MODULES(MEDIASTREAMER, mediastreamer >= 2.6.0)
 
 PKG_CHECK_MODULES(X264, x264 >= 0.67.0)
 
-
-dnl test for ffmpeg presence
-PKG_CHECK_MODULES(LIBAVCODEC, [libavcodec >= 50.0.0 ],ffmpeg_found=yes , ffmpeg_found=no)
-dnl workaround for debian...
-PKG_CHECK_MODULES(LIBAVCODEC, [libavcodec >= 0d.50.0.0 ], ffmpeg_found=yes, ffmpeg_found=no)
-if test x$ffmpeg_found = xno ; then
-	AC_MSG_ERROR([Could not find ffmpeg headers and library. This is mandatory for video support])
-fi
-
-PKG_CHECK_MODULES(LIBSWSCALE, [libswscale >= 0.7.0])
-
-
-dnl check for new/old ffmpeg header file layout
-CPPFLAGS_save=$CPPFLAGS
-CPPFLAGS=$LIBAVCODEC_CFLAGS
-AC_CHECK_HEADERS(libavcodec/avcodec.h)
-CPPFLAGS=$CPPFLAGS_save
-
-if test "$hacked_x264" = "yes" ; then 
-	AC_MSG_NOTICE([Trying to compile with multislicing patched version of X264])
-	CFLAGS="$CFLAGS -DHACKED_X264"
-fi
 
 LDFLAGS="$LDFLAGS -rdynamic "
 
