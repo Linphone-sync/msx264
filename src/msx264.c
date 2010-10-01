@@ -25,7 +25,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include <x264.h>
 
-
+#define RC_MARGIN 10000 /*bits per sec*/
 
 typedef struct _EncData{
 	x264_t *enc;
@@ -62,6 +62,7 @@ static void enc_uninit(MSFilter *f){
 static void enc_preprocess(MSFilter *f){
 	EncData *d=(EncData*)f->data;
 	x264_param_t params;
+	float bitrate;
 	
 	d->packer=rfc3984_new();
 	rfc3984_set_mode(d->packer,d->mode);
@@ -76,11 +77,15 @@ static void enc_preprocess(MSFilter *f){
 	params.i_fps_den=1;
 	params.i_slice_max_size=ms_get_payload_max_size()-100; /*-100 security margin*/
 	params.i_level_idc=13;
+
+	bitrate=(float)d->bitrate*0.92;
+	if (bitrate>RC_MARGIN)
+		bitrate-=RC_MARGIN;
 	
 	params.rc.i_rc_method = X264_RC_ABR;
-	params.rc.i_bitrate=(int)( ( ((float)d->bitrate)*0.8)/1000.0);
+	params.rc.i_bitrate=(int)(bitrate/1000);
 	params.rc.f_rate_tolerance=0.1;
-	params.rc.i_vbv_max_bitrate=(int) (((float)d->bitrate)*0.9/1000.0);
+	params.rc.i_vbv_max_bitrate=(int) ((bitrate+RC_MARGIN/2)/1000);
 	params.rc.i_vbv_buffer_size=params.rc.i_vbv_max_bitrate;
 	params.rc.f_vbv_buffer_init=0.5;
 	params.rc.i_lookahead=0;
@@ -188,10 +193,10 @@ static int enc_set_br(MSFilter *f, void *arg){
 		d->fps=25;
 	}else if (d->bitrate>=512000){
 		d->vsize=MS_VIDEO_SIZE_VGA;
-		d->fps=15;
+		d->fps=25;
         }else if (d->bitrate>=384000){
 		d->vsize=MS_VIDEO_SIZE_CIF;
-		d->fps=30;
+		d->fps=25;
 	}else if (d->bitrate>=256000){
 		d->vsize=MS_VIDEO_SIZE_CIF;
 		d->fps=15;
