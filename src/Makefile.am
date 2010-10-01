@@ -8,7 +8,7 @@ libmsx264_la_LIBADD=\
 	$(MEDIASTREAMER_LIBS) \
 	$(X264_LIBS)
 
-libmsx264_la_LDFLAGS=-module
+libmsx264_la_LDFLAGS=-module -no-undefined
 
 AM_CFLAGS=	\
 		$(MEDIASTREAMER_CFLAGS)\
