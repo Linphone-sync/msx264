@@ -135,7 +135,7 @@ static void enc_process(MSFilter *f){
 	MSQueue nalus;
 	ms_queue_init(&nalus);
 	while((im=ms_queue_get(f->inputs[0]))!=NULL){
-		if (yuv_buf_init_from_mblk(&pic,im)==0){
+		if (ms_yuv_buf_init_from_mblk(&pic,im)==0){
 			x264_picture_t xpic;
 			x264_picture_t oxpic;
 			x264_nal_t *xnals=NULL;

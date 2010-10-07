@@ -1,5 +1,5 @@
 dnl Process this file with autoconf to produce a configure script.
-AC_INIT([msx264],[1.4.0])
+AC_INIT([msx264],[1.4.1])
 
 AM_INIT_AUTOMAKE([tar-ustar])
 
@@ -58,7 +58,7 @@ if test $GCC = yes && test $wall_werror = yes;  then
 	CFLAGS="$CFLAGS -Werror "
 fi
 
-PKG_CHECK_MODULES(MEDIASTREAMER, mediastreamer >= 2.6.0)
+PKG_CHECK_MODULES(MEDIASTREAMER, mediastreamer >= 2.7.0)
 
 PKG_CHECK_MODULES(X264, x264 >= 0.67.0)
 
