@@ -141,6 +141,9 @@ static void enc_process(MSFilter *f){
 			x264_nal_t *xnals=NULL;
 			int num_nals=0;
 
+			memset(&xpic, 0, sizeof(xpic));
+			memset(&oxpic, 0, sizeof(oxpic));
+
 			/*send I frame 2 seconds and 4 seconds after the beginning */
 			if (d->framenum==(int)d->fps*2 || d->framenum==(int)d->fps*4)
 				d->generate_keyframe=TRUE;
