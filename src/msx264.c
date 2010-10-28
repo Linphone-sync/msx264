@@ -27,6 +27,36 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #define RC_MARGIN 10000 /*bits per sec*/
 
+/* the goal of this small object is to tell when to send I frames at startup:
+at 2 and 4 seconds*/
+typedef struct VideoStarter{
+	uint64_t next_time;
+	int i_frame_count;
+}VideoStarter;
+
+static void video_starter_init(VideoStarter *vs){
+	vs->next_time=0;
+	vs->i_frame_count=0;
+}
+
+static void video_starter_first_frame(VideoStarter *vs, uint64_t curtime){
+	vs->next_time=curtime+2000;
+}
+
+static bool_t video_starter_need_i_frame(VideoStarter *vs, uint64_t curtime){
+	if (vs->next_time==0) return FALSE;
+	if (curtime>=vs->next_time){
+		vs->i_frame_count++;
+		if (vs->i_frame_count==1){
+			vs->next_time+=2000;
+		}else{
+			vs->next_time=0;
+		}
+		return TRUE;
+	}
+	return FALSE;
+}
+
 typedef struct _EncData{
 	x264_t *enc;
 	MSVideoSize vsize;
@@ -36,6 +66,7 @@ typedef struct _EncData{
 	uint64_t framenum;
 	Rfc3984Context *packer;
 	int keyframe_int;
+	VideoStarter starter;
 	bool_t generate_keyframe;
 }EncData;
 
@@ -107,6 +138,7 @@ static void enc_preprocess(MSFilter *f){
 	d->enc=x264_encoder_open(&params);
 	if (d->enc==NULL) ms_error("Fail to create x264 encoder.");
 	d->framenum=0;
+	video_starter_init(&d->starter);
 }
 
 static void x264_nals_to_msgb(x264_nal_t *xnals, int num_nals, MSQueue * nalus){
@@ -145,7 +177,7 @@ static void enc_process(MSFilter *f){
 			memset(&oxpic, 0, sizeof(oxpic));
 
 			/*send I frame 2 seconds and 4 seconds after the beginning */
-			if (d->framenum==(int)d->fps*2 || d->framenum==(int)d->fps*4)
+			if (video_starter_need_i_frame(&d->starter,f->ticker->time))
 				d->generate_keyframe=TRUE;
 
 			if (d->generate_keyframe){
@@ -169,6 +201,8 @@ static void enc_process(MSFilter *f){
 				x264_nals_to_msgb(xnals,num_nals,&nalus);
 				rfc3984_pack(d->packer,&nalus,f->outputs[0],ts);
 				d->framenum++;
+				if (d->framenum==0)
+					video_starter_first_frame(&d->starter,f->ticker->time);
 			}else{
 				ms_error("x264_encoder_encode() error.");
 			}
