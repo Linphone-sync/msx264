@@ -250,6 +250,10 @@ static int enc_set_br(MSFilter *f, void *arg){
 		d->vsize=MS_VIDEO_SIZE_QCIF;
 		d->fps=5;
 	}
+#ifdef ANDROID
+	/* we have to limit the fps on android due to limited CPU */
+	if (d->fps>7) d->fps=7;
+#endif
 	ms_message("bitrate set to %i",d->bitrate);
 	return 0;
 }
