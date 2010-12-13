@@ -112,13 +112,18 @@ static void enc_preprocess(MSFilter *f){
 	bitrate=(float)d->bitrate*0.92;
 	if (bitrate>RC_MARGIN)
 		bitrate-=RC_MARGIN;
-	
+
+#ifndef ANDROID	
 	params.rc.i_rc_method = X264_RC_ABR;
 	params.rc.i_bitrate=(int)(bitrate/1000);
 	params.rc.f_rate_tolerance=0.1;
 	params.rc.i_vbv_max_bitrate=(int) ((bitrate+RC_MARGIN/2)/1000);
 	params.rc.i_vbv_buffer_size=params.rc.i_vbv_max_bitrate;
 	params.rc.f_vbv_buffer_init=0.5;
+#else
+	params.rc.i_rc_method = X264_RC_CQP;
+	params.rc.i_bitrate=(int)(bitrate/1000);
+#endif
 	params.rc.i_lookahead=0;
 	/*enable this by config ?*/
 	/*
@@ -251,7 +256,8 @@ static int enc_set_br(MSFilter *f, void *arg){
 		d->fps=5;
 	}
 #ifdef ANDROID
-	/* we have to limit the fps on android due to limited CPU */
+	/* we have to limit size and fps on android due to limited CPU */
+	d->vsize=MS_VIDEO_SIZE_QCIF;
 	if (d->fps>7) d->fps=7;
 #endif
 	ms_message("bitrate set to %i",d->bitrate);
