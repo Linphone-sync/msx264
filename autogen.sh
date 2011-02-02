@@ -12,7 +12,7 @@ fi
 echo "Generating build scripts in this mediastreamer plugin"
 set -x
 libtoolize --copy --force
-$ACLOCAL
+$ACLOCAL -I/share/aclocal
 $AUTOMAKE --force-missing --add-missing --copy
 autoconf
 
