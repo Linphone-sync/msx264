@@ -22,8 +22,16 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "mediastreamer2/msvideo.h"
 #include "mediastreamer2/rfc3984.h"
 
+#ifdef _MSC_VER
+#include <stdint.h>
+#endif
 
 #include <x264.h>
+
+#ifndef VERSION
+#define VERSION "1.4.1"
+#endif
+
 
 #define RC_MARGIN 10000 /*bits per sec*/
 
@@ -75,7 +83,7 @@ static void enc_init(MSFilter *f){
 	EncData *d=ms_new(EncData,1);
 	d->enc=NULL;
 	d->bitrate=384000;
-	d->vsize=MS_VIDEO_SIZE_CIF;
+	MS_VIDEO_SIZE_ASSIGN(d->vsize,CIF);
 	d->fps=30;
 	d->keyframe_int=10; /*10 seconds */
 	d->mode=0;
@@ -231,28 +239,28 @@ static int enc_set_br(MSFilter *f, void *arg){
 	d->bitrate=*(int*)arg;
 
 	if (d->bitrate>=1024000){
-		d->vsize=MS_VIDEO_SIZE_VGA;
+		MS_VIDEO_SIZE_ASSIGN(d->vsize,VGA);
 		d->fps=25;
 	}else if (d->bitrate>=512000){
-		d->vsize=MS_VIDEO_SIZE_VGA;
+		MS_VIDEO_SIZE_ASSIGN(d->vsize,VGA);
 		d->fps=25;
-        }else if (d->bitrate>=384000){
-		d->vsize=MS_VIDEO_SIZE_CIF;
+	}else if (d->bitrate>=384000){
+		MS_VIDEO_SIZE_ASSIGN(d->vsize,CIF);
 		d->fps=25;
 	}else if (d->bitrate>=256000){
-		d->vsize=MS_VIDEO_SIZE_CIF;
+		MS_VIDEO_SIZE_ASSIGN(d->vsize,CIF);
 		d->fps=15;
 	}else if (d->bitrate>=128000){
-		d->vsize=MS_VIDEO_SIZE_CIF;
+		MS_VIDEO_SIZE_ASSIGN(d->vsize,CIF);
 		d->fps=15;
 	}else if (d->bitrate>=64000){
-		d->vsize=MS_VIDEO_SIZE_CIF;
+		MS_VIDEO_SIZE_ASSIGN(d->vsize,CIF);
 		d->fps=10;
 	}else if (d->bitrate>=32000){
-		d->vsize=MS_VIDEO_SIZE_QCIF;
+		MS_VIDEO_SIZE_ASSIGN(d->vsize,QCIF);
 		d->fps=10;
 	}else{
-		d->vsize=MS_VIDEO_SIZE_QCIF;
+		MS_VIDEO_SIZE_ASSIGN(d->vsize,QCIF);
 		d->fps=5;
 	}
 #ifdef ANDROID
@@ -317,10 +325,12 @@ static MSFilterMethod enc_methods[]={
 	{	0	,			NULL		}
 };
 
+#ifndef _MSC_VER
+
 static MSFilterDesc x264_enc_desc={
 	.id=MS_FILTER_PLUGIN_ID,
 	.name="MSX264Enc",
-	.text="A H264 encoder based on x264 project (with multislicing enabled)",
+	.text="A H264 encoder based on x264 project",
 	.category=MS_FILTER_ENCODER,
 	.enc_fmt="H264",
 	.ninputs=1,
@@ -333,7 +343,27 @@ static MSFilterDesc x264_enc_desc={
 	.methods=enc_methods
 };
 
-void libmsx264_init(void){
+#else
+
+static MSFilterDesc x264_enc_desc={
+	MS_FILTER_PLUGIN_ID,
+	"MSX264Enc",
+	"A H264 encoder based on x264 project",
+	MS_FILTER_ENCODER,
+	"H264",
+	1,
+	1,
+	enc_init,
+	enc_preprocess,
+	enc_process,
+	enc_postprocess,
+	enc_uninit,
+	enc_methods
+};
+
+#endif
+
+MS2_PUBLIC void libmsx264_init(void){
 	ms_filter_register(&x264_enc_desc);
 	ms_message("ms264-" VERSION " plugin registered.");
 }
