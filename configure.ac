@@ -132,6 +132,9 @@ AC_SUBST(RELEASE)
 
 AC_OUTPUT(
 Makefile
+build/Makefile
+build/vs/Makefile
 src/Makefile
 msx264.iss
 )
+

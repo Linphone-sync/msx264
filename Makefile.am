@@ -1,6 +1,6 @@
 EXTRA_DIST=autogen.sh
 
-SUBDIRS=src
+SUBDIRS=src build
 
 
 
