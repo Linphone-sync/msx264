@@ -1,5 +1,5 @@
 dnl Process this file with autoconf to produce a configure script.
-AC_INIT([msx264],[1.4.1])
+AC_INIT([msx264],[1.4.2])
 
 AM_INIT_AUTOMAKE([tar-ustar])
 
