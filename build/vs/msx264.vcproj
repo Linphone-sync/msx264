@@ -40,7 +40,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="..\..\..\mediastreamer2\include;..\..\..\ortp\include;&quot;..\..\..\linphone-deps\include&quot;"
+				AdditionalIncludeDirectories="..\..\..\mediastreamer2\include;..\..\..\ortp\include;&quot;..\..\..\linphone-deps\include&quot;;&quot;..\..\..\linphone-deps\include\msvc&quot;"
 				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_USRDLL;MSX264_EXPORTS"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="0"
@@ -64,7 +64,7 @@
 				AdditionalDependencies="mediastreamer2.lib ortp.lib libx264.a libmingwex.a libmingw32.a libgcc.a"
 				OutputFile="$(OutDir)\lib$(ProjectName).dll"
 				LinkIncremental="2"
-				AdditionalLibraryDirectories="&quot;..\..\..\ortp\build\win32native\$(OutDir)&quot;;&quot;..\..\..\linphone-deps\lib&quot;;&quot;..\..\..\mediastreamer2\build\win32native\$(OutDir)&quot;"
+				AdditionalLibraryDirectories="&quot;..\..\..\ortp\build\win32native\$(OutDir)&quot;;&quot;..\..\..\linphone-deps\lib&quot;;&quot;..\..\..\mediastreamer2\build\win32native\$(OutDir)&quot;;&quot;..\..\..\linphone-deps\lib\msvc&quot;"
 				GenerateDebugInformation="true"
 				SubSystem="2"
 				TargetMachine="1"
@@ -114,7 +114,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories="..\..\..\mediastreamer2\include;..\..\..\ortp\include;&quot;..\..\..\linphone-deps\include&quot;"
+				AdditionalIncludeDirectories="..\..\..\mediastreamer2\include;..\..\..\ortp\include;&quot;..\..\..\linphone-deps\include&quot;;&quot;..\..\..\linphone-deps\include\msvc&quot;"
 				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;MSX264_EXPORTS;"
 				RuntimeLibrary="0"
 				UsePrecompiledHeader="0"
@@ -135,7 +135,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="mediastreamer2.lib ortp.lib libx264.a libmingwex.a libmingw32.a libgcc.a"
 				OutputFile="$(OutDir)\lib$(ProjectName).dll"
-				AdditionalLibraryDirectories="&quot;..\..\..\ortp\build\win32native\$(OutDir)&quot;;&quot;..\..\..\linphone-deps\lib&quot;;&quot;..\..\..\mediastreamer2\build\win32native\$(OutDir)&quot;"
+				AdditionalLibraryDirectories="&quot;..\..\..\ortp\build\win32native\$(OutDir)&quot;;&quot;..\..\..\linphone-deps\lib&quot;;&quot;..\..\..\mediastreamer2\build\win32native\$(OutDir)&quot;;&quot;..\..\..\linphone-deps\lib\msvc&quot;"
 				GenerateDebugInformation="true"
 				SubSystem="2"
 				OptimizeReferences="2"
