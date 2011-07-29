@@ -35,6 +35,42 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #define RC_MARGIN 10000 /*bits per sec*/
 
+/*
+* WARNING!
+*
+* The following definition is aimed to build a forced high-resolution
+* profile with fast encoding parameters for a single-core Android smartphone
+* in order to obtain a reasonable framerate.
+*
+* You SHOULD NOT use it unless you know what you are doing.
+*
+* Maximal observed framerates: 12 frames/s with CIF, 3 frames/s with VGA,
+* on a Samsung GalaxyS I9000.
+*
+* Since this is a rude, hard-coded modification, it MAY induce unstable
+* behaviours: caution is advised.
+*
+* To enable this special build, uncomment the following definition of the
+* SPECIAL_HIGHRES_BUILD pre-processor variable and set it to a
+* MediaStreamer2-compliant video size (e.g. MS_VIDEO_SIZE_CIF).
+*
+* You MUST keep the definition of the SPECIAL_HIGHRES_BUILD_CRF variable.
+* You MAY change its value which SHOULD remain between 22 and 28.
+* 
+*
+* In order to ensure JNI compatibility:
+* You MUST have the org.linphone.BandwithManager.currentProfile set to
+* HIGH_RESOLUTION in the constructor.
+* You MUST have the HIGH_RESOLUTION case of
+* org.linphone.BandwithManager.maximumVideoSize(int, boolean) returning the
+* MediaStreamer2-compliant video size you want; you MAY need to define the
+* size in org.linphone.core.VideoSize if it does not exist.
+* You SHOULD have org.linphone.BandwithManager.bandwidthes[0] set to
+* {1024, 1024} to tell Linphone to use maximal bandwidth.
+*/
+#define SPECIAL_HIGHRES_BUILD MS_VIDEO_SIZE_QVGA
+#define SPECIAL_HIGHRES_BUILD_CRF 28
+
 /* the goal of this small object is to tell when to send I frames at startup:
 at 2 and 4 seconds*/
 typedef struct VideoStarter{
@@ -82,8 +118,8 @@ typedef struct _EncData{
 static void enc_init(MSFilter *f){
 	EncData *d=ms_new(EncData,1);
 	d->enc=NULL;
+    MS_VIDEO_SIZE_ASSIGN(d->vsize,CIF);
 	d->bitrate=384000;
-	MS_VIDEO_SIZE_ASSIGN(d->vsize,CIF);
 	d->fps=30;
 	d->keyframe_int=10; /*10 seconds */
 	d->mode=0;
@@ -108,30 +144,39 @@ static void enc_preprocess(MSFilter *f){
 	rfc3984_enable_stap_a(d->packer,FALSE);
 	
 	x264_param_default(&params);
-	params.i_threads=1;
+
+	params.i_threads=X264_THREADS_AUTO;
 	params.i_sync_lookahead=0;
 	params.i_width=d->vsize.width;
 	params.i_height=d->vsize.height;
 	params.i_fps_num=(int)d->fps;
 	params.i_fps_den=1;
-	params.i_slice_max_size=ms_get_payload_max_size()-100; /*-100 security margin*/
-	params.i_level_idc=13;
-
+	params.i_slice_max_size=ms_get_payload_max_size()-100; //-100 security margin
+	params.i_keyint_max=250;
+	params.i_keyint_min=25;
+	params.i_scenecut_threshold=40;
+	params.b_deblocking_filter=1;
+	params.i_bframe_adaptive=X264_B_ADAPT_FAST;
+	params.analyse.intra=X264_ANALYSE_I4x4 & X264_ANALYSE_I8x8 & X264_ANALYSE_PSUB8x8;
+	params.analyse.inter=X264_ANALYSE_I4x4 & X264_ANALYSE_I8x8 & X264_ANALYSE_PSUB8x8;
+	params.analyse.b_transform_8x8=1;
+	params.analyse.b_fast_pskip=1;
+	params.analyse.i_me_method=X264_ME_HEX;
+	params.analyse.i_me_range=16;
+	params.analyse.i_direct_mv_pred=1;
+	params.analyse.b_chroma_me=1;
+    
 	bitrate=(float)d->bitrate*0.92;
 	if (bitrate>RC_MARGIN)
 		bitrate-=RC_MARGIN;
 
-#ifndef ANDROID	
-	params.rc.i_rc_method = X264_RC_ABR;
-	params.rc.i_bitrate=(int)(bitrate/1000);
-	params.rc.f_rate_tolerance=0.1;
-	params.rc.i_vbv_max_bitrate=(int) ((bitrate+RC_MARGIN/2)/1000);
-	params.rc.i_vbv_buffer_size=params.rc.i_vbv_max_bitrate;
-	params.rc.f_vbv_buffer_init=0.5;
-#else
-	params.rc.i_rc_method = X264_RC_CQP;
-	params.rc.i_bitrate=(int)(bitrate/1000);
-#endif
+	params.rc.i_rc_method = X264_RC_CRF;
+	params.rc.f_rf_constant=SPECIAL_HIGHRES_BUILD_CRF;
+	params.rc.i_qp_min=10;
+	params.rc.i_qp_max=51;
+	params.rc.i_qp_step=10;
+	params.rc.f_qcompress=0.6;
+
 	params.rc.i_lookahead=0;
 	/*enable this by config ?*/
 	/*
@@ -144,9 +189,12 @@ static void enc_preprocess(MSFilter *f){
 	//these parameters must be set so that our stream is baseline
 	params.analyse.b_transform_8x8 = 0;
 	params.b_cabac = 0;
-	params.i_cqm_preset = X264_CQM_FLAT;
+	params.i_cqm_preset = X264_CQM_FLAT; // X264_CQM_JVT; ?
 	params.i_bframe = 0;
 	params.analyse.i_weighted_pred = X264_WEIGHTP_NONE;
+    
+    // tune --no-latency
+    params.i_bframe = 0;
 	
 	d->enc=x264_encoder_open(&params);
 	if (d->enc==NULL) ms_error("Fail to create x264 encoder.");
@@ -210,8 +258,13 @@ static void enc_process(MSFilter *f){
 			xpic.img.plane[1]=pic.planes[1];
 			xpic.img.plane[2]=pic.planes[2];
 			xpic.img.plane[3]=0;
+            
 			if (x264_encoder_encode(d->enc,&xnals,&num_nals,&xpic,&oxpic)>=0){
 				x264_nals_to_msgb(xnals,num_nals,&nalus);
+                if (num_nals == 0)
+                    ms_message("Delayed frames info: current=%d max=%d\n", 
+                               x264_encoder_delayed_frames(d->enc),
+                               x264_encoder_maximum_delayed_frames(d->enc));
 				rfc3984_pack(d->packer,&nalus,f->outputs[0],ts);
 				d->framenum++;
 				if (d->framenum==0)
@@ -238,6 +291,7 @@ static int enc_set_br(MSFilter *f, void *arg){
 	EncData *d=(EncData*)f->data;
 	d->bitrate=*(int*)arg;
 
+#ifndef ANDROID | defined(TARGET_OS_IPHONE)
 	if (d->bitrate>=1024000){
 		MS_VIDEO_SIZE_ASSIGN(d->vsize,VGA);
 		d->fps=25;
@@ -263,11 +317,14 @@ static int enc_set_br(MSFilter *f, void *arg){
 		MS_VIDEO_SIZE_ASSIGN(d->vsize,QCIF);
 		d->fps=5;
 	}
+#endif
+    
 #ifdef ANDROID
 	/* we have to limit size and fps on android due to limited CPU */
 	d->vsize=MS_VIDEO_SIZE_QCIF;
 	if (d->fps>7) d->fps=7;
 #endif
+
 	ms_message("bitrate set to %i",d->bitrate);
 	return 0;
 }
@@ -292,7 +349,9 @@ static int enc_get_vsize(MSFilter *f, void *arg){
 
 static int enc_set_vsize(MSFilter *f, void *arg){
 	EncData *d=(EncData*)f->data;
+
 	d->vsize=*(MSVideoSize*)arg;
+
 	return 0;
 }
 
