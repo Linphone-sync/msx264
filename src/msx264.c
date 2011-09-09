@@ -35,40 +35,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #define RC_MARGIN 10000 /*bits per sec*/
 
-/*
-* WARNING!
-*
-* The following definition is aimed to build a forced high-resolution
-* profile with fast encoding parameters for a single-core Android smartphone
-* in order to obtain a reasonable framerate.
-*
-* You SHOULD NOT use it unless you know what you are doing.
-*
-* Maximal observed framerates: 12 frames/s with CIF, 3 frames/s with VGA,
-* on a Samsung GalaxyS I9000.
-*
-* Since this is a rude, hard-coded modification, it MAY induce unstable
-* behaviours: caution is advised.
-*
-* To enable this special build, uncomment the following definition of the
-* SPECIAL_HIGHRES_BUILD pre-processor variable and set it to a
-* MediaStreamer2-compliant video size (e.g. MS_VIDEO_SIZE_CIF).
-*
-* You MUST keep the definition of the SPECIAL_HIGHRES_BUILD_CRF variable.
-* You MAY change its value which SHOULD remain between 22 and 28.
-* 
-*
-* In order to ensure JNI compatibility:
-* You MUST have the org.linphone.BandwithManager.currentProfile set to
-* HIGH_RESOLUTION in the constructor.
-* You MUST have the HIGH_RESOLUTION case of
-* org.linphone.BandwithManager.maximumVideoSize(int, boolean) returning the
-* MediaStreamer2-compliant video size you want; you MAY need to define the
-* size in org.linphone.core.VideoSize if it does not exist.
-* You SHOULD have org.linphone.BandwithManager.bandwidthes[0] set to
-* {1024, 1024} to tell Linphone to use maximal bandwidth.
-*/
-#define SPECIAL_HIGHRES_BUILD MS_VIDEO_SIZE_QVGA
+
 #define SPECIAL_HIGHRES_BUILD_CRF 28
 
 /* the goal of this small object is to tell when to send I frames at startup:
@@ -261,10 +228,10 @@ static void enc_process(MSFilter *f){
             
 			if (x264_encoder_encode(d->enc,&xnals,&num_nals,&xpic,&oxpic)>=0){
 				x264_nals_to_msgb(xnals,num_nals,&nalus);
-                if (num_nals == 0)
-                    ms_message("Delayed frames info: current=%d max=%d\n", 
-                               x264_encoder_delayed_frames(d->enc),
-                               x264_encoder_maximum_delayed_frames(d->enc));
+				/*if (num_nals == 0)	ms_message("Delayed frames info: current=%d max=%d\n", 
+					x264_encoder_delayed_frames(d->enc),
+					x264_encoder_maximum_delayed_frames(d->enc));
+				*/
 				rfc3984_pack(d->packer,&nalus,f->outputs[0],ts);
 				d->framenum++;
 				if (d->framenum==0)
@@ -291,7 +258,6 @@ static int enc_set_br(MSFilter *f, void *arg){
 	EncData *d=(EncData*)f->data;
 	d->bitrate=*(int*)arg;
 
-#ifndef ANDROID | defined(TARGET_OS_IPHONE)
 	if (d->bitrate>=1024000){
 		MS_VIDEO_SIZE_ASSIGN(d->vsize,VGA);
 		d->fps=25;
@@ -317,7 +283,6 @@ static int enc_set_br(MSFilter *f, void *arg){
 		MS_VIDEO_SIZE_ASSIGN(d->vsize,QCIF);
 		d->fps=5;
 	}
-#endif
     
 #ifdef ANDROID
 	/* we have to limit size and fps on android due to limited CPU */
