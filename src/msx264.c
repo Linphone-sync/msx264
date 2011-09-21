@@ -259,38 +259,42 @@ static int enc_set_br(MSFilter *f, void *arg){
 	d->bitrate=*(int*)arg;
 
 	if (d->bitrate>=1024000){
-		MS_VIDEO_SIZE_ASSIGN(d->vsize,VGA);
+		d->vsize.width = MS_VIDEO_SIZE_SVGA_W;
+		d->vsize.height = MS_VIDEO_SIZE_SVGA_H;
 		d->fps=25;
 	}else if (d->bitrate>=512000){
-		MS_VIDEO_SIZE_ASSIGN(d->vsize,VGA);
+		d->vsize.width = MS_VIDEO_SIZE_VGA_W;
+		d->vsize.height = MS_VIDEO_SIZE_VGA_H;
 		d->fps=25;
-	}else if (d->bitrate>=384000){
-		MS_VIDEO_SIZE_ASSIGN(d->vsize,CIF);
-		d->fps=25;
-	}else if (d->bitrate>=256000){
-		MS_VIDEO_SIZE_ASSIGN(d->vsize,CIF);
+	} else if (d->bitrate>=256000){
+		d->vsize.width = MS_VIDEO_SIZE_VGA_W;
+		d->vsize.height = MS_VIDEO_SIZE_VGA_H;
+		d->fps=15;
+	}else if (d->bitrate>=170000){
+		d->vsize.width=MS_VIDEO_SIZE_QVGA_W;
+		d->vsize.height=MS_VIDEO_SIZE_QVGA_H;
 		d->fps=15;
 	}else if (d->bitrate>=128000){
-		MS_VIDEO_SIZE_ASSIGN(d->vsize,CIF);
-		d->fps=15;
+		d->vsize.width=MS_VIDEO_SIZE_QCIF_W;
+		d->vsize.height=MS_VIDEO_SIZE_QCIF_H;
+		d->fps=10;
 	}else if (d->bitrate>=64000){
-		MS_VIDEO_SIZE_ASSIGN(d->vsize,CIF);
-		d->fps=10;
-	}else if (d->bitrate>=32000){
-		MS_VIDEO_SIZE_ASSIGN(d->vsize,QCIF);
-		d->fps=10;
+		d->vsize.width=MS_VIDEO_SIZE_QCIF_W;
+		d->vsize.height=MS_VIDEO_SIZE_QCIF_H;
+		d->fps=7;
 	}else{
-		MS_VIDEO_SIZE_ASSIGN(d->vsize,QCIF);
+		d->vsize.width=MS_VIDEO_SIZE_QCIF_W;
+		d->vsize.height=MS_VIDEO_SIZE_QCIF_H;
 		d->fps=5;
 	}
-    
-#ifdef ANDROID
-	/* we have to limit size and fps on android due to limited CPU */
-	d->vsize=MS_VIDEO_SIZE_QCIF;
-	if (d->fps>7) d->fps=7;
-#endif
 
-	ms_message("bitrate set to %i",d->bitrate);
+#if TARGET_OS_IPHONE ==1
+	d->vsize.width=MS_VIDEO_SIZE_QVGA_H;
+	d->vsize.height=MS_VIDEO_SIZE_QVGA_W;
+	d->fps=7;
+#endif
+	
+	ms_message("bitrate requested...: %d (%d x %d)\n", d->bitrate, d->vsize.width, d->vsize.height);
 	return 0;
 }
 
