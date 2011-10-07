@@ -289,9 +289,10 @@ static int enc_set_br(MSFilter *f, void *arg){
 	}
 
 #if TARGET_OS_IPHONE ==1
-	d->vsize.width=MS_VIDEO_SIZE_QVGA_H;
-	d->vsize.height=MS_VIDEO_SIZE_QVGA_W;
+	d->vsize.width=MS_VIDEO_SIZE_QVGA_W;
+	d->vsize.height=MS_VIDEO_SIZE_QVGA_H;
 	d->fps=7;
+
 #endif
 	
 	ms_message("bitrate requested...: %d (%d x %d)\n", d->bitrate, d->vsize.width, d->vsize.height);
