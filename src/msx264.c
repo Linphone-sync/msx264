@@ -129,7 +129,7 @@ static void enc_preprocess(MSFilter *f){
 	if (bitrate>RC_MARGIN)
 		bitrate-=RC_MARGIN;
 	
-#ifndef ANDROID && !TARGET_OS_IPHONE	
+#ifndef __arm__	
 	params.rc.i_rc_method = X264_RC_ABR;
 	params.rc.i_bitrate=(int)(bitrate/1000);
 	params.rc.f_rate_tolerance=0.1;
