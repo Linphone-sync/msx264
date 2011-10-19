@@ -305,7 +305,7 @@ static int enc_set_br(MSFilter *f, void *arg){
 #if defined (ANDROID) || TARGET_OS_IPHONE==1
 	d->vsize.width=MS_VIDEO_SIZE_QVGA_W;
 	d->vsize.height=MS_VIDEO_SIZE_QVGA_H;
-	d->fps=10;
+	d->fps=12;
 
 #endif
 	
