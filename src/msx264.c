@@ -70,6 +70,7 @@ static bool_t video_starter_need_i_frame(VideoStarter *vs, uint64_t curtime){
 
 typedef struct _EncData{
 	x264_t *enc;
+	x264_param_t params;
 	MSVideoSize vsize;
 	int bitrate;
 	float fps;
@@ -101,58 +102,66 @@ static void enc_uninit(MSFilter *f){
 	ms_free(d);
 }
 
-static void enc_preprocess(MSFilter *f){
+static void apply_bitrate(MSFilter *f, int target_bitrate){
 	EncData *d=(EncData*)f->data;
-	x264_param_t params;
+	x264_param_t *params=&d->params;
 	float bitrate;
-	d->packer=rfc3984_new();
-	rfc3984_set_mode(d->packer,d->mode);
-	rfc3984_enable_stap_a(d->packer,FALSE);
-#ifdef __arm__	
-	if (x264_param_default_preset(&params,"superfast"/*"ultrafast"*/,"zerolatency")) { 
-#else
-		x264_param_default(&params); {
-#endif
-		ms_error("Cannot apply default x264 configuration");
-	};
-	
-	params.i_threads=1;
-	params.i_sync_lookahead=0;
-	params.i_width=d->vsize.width;
-	params.i_height=d->vsize.height;
-	params.i_fps_num=(int)d->fps;
-	params.i_fps_den=1;
-	params.i_slice_max_size=ms_get_payload_max_size()-100; /*-100 security margin*/
-	params.i_level_idc=13;
-	
+
+	d->bitrate=target_bitrate;
 	bitrate=(float)d->bitrate*0.92;
 	if (bitrate>RC_MARGIN)
 		bitrate-=RC_MARGIN;
 	
-#ifndef __arm__	
-	params.rc.i_rc_method = X264_RC_ABR;
-	params.rc.i_bitrate=(int)(bitrate/1000);
-	params.rc.f_rate_tolerance=0.1;
-	params.rc.i_vbv_max_bitrate=(int) ((bitrate+RC_MARGIN/2)/1000);
-	params.rc.i_vbv_buffer_size=params.rc.i_vbv_max_bitrate;
-	params.rc.f_vbv_buffer_init=0.5;
+	params->rc.i_rc_method = X264_RC_ABR;
+	params->rc.i_bitrate=(int)(bitrate/1000);
+	params->rc.f_rate_tolerance=0.1;
+	params->rc.i_vbv_max_bitrate=(int) ((bitrate+RC_MARGIN/2)/1000);
+	params->rc.i_vbv_buffer_size=params->rc.i_vbv_max_bitrate;
+	params->rc.f_vbv_buffer_init=0.5;
+}
+
+static void enc_preprocess(MSFilter *f){
+	EncData *d=(EncData*)f->data;
+	x264_param_t *params=&d->params;
+	
+	d->packer=rfc3984_new();
+	rfc3984_set_mode(d->packer,d->mode);
+	rfc3984_enable_stap_a(d->packer,FALSE);
+#ifdef __arm__	
+	if (x264_param_default_preset(params,"superfast"/*"ultrafast"*/,"zerolatency")) { 
+#else
+		x264_param_default(params); {
 #endif
-	params.rc.i_lookahead=0;
+		ms_error("Cannot apply default x264 configuration");
+	};
+	
+	params->i_threads=1;
+	params->i_sync_lookahead=0;
+	params->i_width=d->vsize.width;
+	params->i_height=d->vsize.height;
+	params->i_fps_num=(int)d->fps;
+	params->i_fps_den=1;
+	params->i_slice_max_size=ms_get_payload_max_size()-100; /*-100 security margin*/
+	params->i_level_idc=13;
+	
+	apply_bitrate(f,d->bitrate);
+
+	params->rc.i_lookahead=0;
 	/*enable this by config ?*/
 	/*
 	 params.i_keyint_max = (int)d->fps*d->keyframe_int;
 	 params.i_keyint_min = (int)d->fps;
 	 */
-	params.b_repeat_headers=1;
-	params.b_annexb=0;
+	params->b_repeat_headers=1;
+	params->b_annexb=0;
 	
 	//these parameters must be set so that our stream is baseline
-	params.analyse.b_transform_8x8 = 0;
-	params.b_cabac = 0;
-	params.i_cqm_preset = X264_CQM_FLAT;
-	params.i_bframe = 0;
-	params.analyse.i_weighted_pred = X264_WEIGHTP_NONE;
-	d->enc=x264_encoder_open(&params);
+	params->analyse.b_transform_8x8 = 0;
+	params->b_cabac = 0;
+	params->i_cqm_preset = X264_CQM_FLAT;
+	params->i_bframe = 0;
+	params->analyse.i_weighted_pred = X264_WEIGHTP_NONE;
+	d->enc=x264_encoder_open(params);
 	if (d->enc==NULL) ms_error("Fail to create x264 encoder.");
 	d->framenum=0;
 	video_starter_init(&d->starter);
@@ -243,10 +252,26 @@ static void enc_postprocess(MSFilter *f){
 	}
 }
 
+static int enc_get_br(MSFilter *f, void*arg){
+	EncData *d=(EncData*)f->data;
+	*(int*)arg=d->bitrate;
+	return 0;
+}
+
 static int enc_set_br(MSFilter *f, void *arg){
 	EncData *d=(EncData*)f->data;
 	d->bitrate=*(int*)arg;
 
+	if (d->enc){
+		ms_filter_lock(f);
+		apply_bitrate(f,d->bitrate);
+		if (x264_encoder_reconfig(d->enc,&d->params)!=0){
+			ms_error("x264_encoder_reconfig() failed.");
+		}
+		ms_filter_unlock(f);
+		return 0;
+	}
+	
 	if (d->bitrate>=1024000){
 		d->vsize.width = MS_VIDEO_SIZE_SVGA_W;
 		d->vsize.height = MS_VIDEO_SIZE_SVGA_H;
@@ -335,6 +360,7 @@ static int enc_req_vfu(MSFilter *f, void *arg){
 static MSFilterMethod enc_methods[]={
 	{	MS_FILTER_SET_FPS	,	enc_set_fps	},
 	{	MS_FILTER_SET_BITRATE	,	enc_set_br	},
+	{	MS_FILTER_GET_BITRATE	,	enc_get_br	},
 	{	MS_FILTER_GET_FPS	,	enc_get_fps	},
 	{	MS_FILTER_GET_VIDEO_SIZE,	enc_get_vsize	},
 	{	MS_FILTER_SET_VIDEO_SIZE,	enc_set_vsize	},
