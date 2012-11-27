@@ -366,6 +366,7 @@ static MSFilterMethod enc_methods[]={
 	{	MS_FILTER_SET_VIDEO_SIZE,	enc_set_vsize	},
 	{	MS_FILTER_ADD_FMTP	,	enc_add_fmtp	},
 	{	MS_FILTER_REQ_VFU	,	enc_req_vfu	},
+	{	MS_VIDEO_ENCODER_REQ_VFU,	enc_req_vfu	},
 	{	0	,			NULL		}
 };
 
