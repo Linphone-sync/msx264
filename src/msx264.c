@@ -231,9 +231,9 @@ static void enc_process(MSFilter *f){
 					x264_encoder_maximum_delayed_frames(d->enc));
 				*/
 				rfc3984_pack(d->packer,&nalus,f->outputs[0],ts);
-				d->framenum++;
 				if (d->framenum==0)
 					video_starter_first_frame(&d->starter,f->ticker->time);
+				d->framenum++;
 			}else{
 				ms_error("x264_encoder_encode() error.");
 			}
