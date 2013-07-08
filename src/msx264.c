@@ -135,7 +135,7 @@ static void enc_preprocess(MSFilter *f){
 		ms_error("Cannot apply default x264 configuration");
 	};
 	
-	params->i_threads=1;
+	params->i_threads=ms_get_cpu_count();
 	params->i_sync_lookahead=0;
 	params->i_width=d->vsize.width;
 	params->i_height=d->vsize.height;
