@@ -38,6 +38,25 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #define SPECIAL_HIGHRES_BUILD_CRF 28
 
+
+#define MS_X264_CONF(bitrate, resolution, fps) \
+	{ bitrate, MS_VIDEO_SIZE_ ## resolution, fps, NULL }
+
+static const MSVideoConfiguration x264_conf_list[] = {
+#if defined(ANDROID) || (TARGET_OS_IPHONE == 1)
+	MS_X264_CONF(0, QVGA, 12)
+#else
+	MS_X264_CONF(1024000, SVGA, 25),
+	MS_X264_CONF( 512000,  VGA, 25),
+	MS_X264_CONF( 256000,  VGA, 15),
+	MS_X264_CONF( 170000, QVGA, 15),
+	MS_X264_CONF( 128000, QCIF, 10),
+	MS_X264_CONF(  64000, QCIF,  7),
+	MS_X264_CONF(      0, QCIF,  5)
+#endif
+};
+
+
 /* the goal of this small object is to tell when to send I frames at startup:
 at 2 and 4 seconds*/
 typedef struct VideoStarter{
@@ -258,58 +277,44 @@ static int enc_get_br(MSFilter *f, void*arg){
 	return 0;
 }
 
-static int enc_set_br(MSFilter *f, void *arg){
-	EncData *d=(EncData*)f->data;
-	d->bitrate=*(int*)arg;
+static int enc_set_configuration(MSFilter *f, void *arg) {
+	EncData *d = (EncData *)f->data;
+	const MSVideoConfiguration *vconf = (const MSVideoConfiguration *)arg;
 
-	if (d->enc){
+	d->bitrate = vconf->bitrate;
+	if (d->enc) {
 		ms_filter_lock(f);
-		apply_bitrate(f,d->bitrate);
-		if (x264_encoder_reconfig(d->enc,&d->params)!=0){
+		apply_bitrate(f, d->bitrate);
+		if (x264_encoder_reconfig(d->enc, &d->params) != 0) {
 			ms_error("x264_encoder_reconfig() failed.");
 		}
 		ms_filter_unlock(f);
 		return 0;
 	}
-	
-	if (d->bitrate>=1024000){
-		d->vsize.width = MS_VIDEO_SIZE_SVGA_W;
-		d->vsize.height = MS_VIDEO_SIZE_SVGA_H;
-		d->fps=25;
-	}else if (d->bitrate>=512000){
-		d->vsize.width = MS_VIDEO_SIZE_VGA_W;
-		d->vsize.height = MS_VIDEO_SIZE_VGA_H;
-		d->fps=25;
-	} else if (d->bitrate>=256000){
-		d->vsize.width = MS_VIDEO_SIZE_VGA_W;
-		d->vsize.height = MS_VIDEO_SIZE_VGA_H;
-		d->fps=15;
-	}else if (d->bitrate>=170000){
-		d->vsize.width=MS_VIDEO_SIZE_QVGA_W;
-		d->vsize.height=MS_VIDEO_SIZE_QVGA_H;
-		d->fps=15;
-	}else if (d->bitrate>=128000){
-		d->vsize.width=MS_VIDEO_SIZE_QCIF_W;
-		d->vsize.height=MS_VIDEO_SIZE_QCIF_H;
-		d->fps=10;
-	}else if (d->bitrate>=64000){
-		d->vsize.width=MS_VIDEO_SIZE_QCIF_W;
-		d->vsize.height=MS_VIDEO_SIZE_QCIF_H;
-		d->fps=7;
-	}else{
-		d->vsize.width=MS_VIDEO_SIZE_QCIF_W;
-		d->vsize.height=MS_VIDEO_SIZE_QCIF_H;
-		d->fps=5;
+
+	d->vsize = vconf->vsize;
+	d->fps = vconf->fps;
+	ms_message("Video configuration set: bitrate=%dbits/s, fps=%f, vsize=%dx%d", d->bitrate, d->fps, d->vsize.width, d->vsize.height);
+	return 0;
+}
+
+static int enc_set_br(MSFilter *f, void *arg) {
+	int br = *(int *)arg;
+	const MSVideoConfiguration *current_vconf = &x264_conf_list[0];
+	const MSVideoConfiguration *closer_to_best_vconf = NULL;
+	MSVideoConfiguration best_vconf;
+
+	while (closer_to_best_vconf == NULL) {
+		if ((br >= current_vconf->bitrate) || (current_vconf->bitrate == 0)) {
+			closer_to_best_vconf = current_vconf;
+		} else {
+			current_vconf++;
+		}
 	}
 
-#if defined (ANDROID) || TARGET_OS_IPHONE==1
-	d->vsize.width=MS_VIDEO_SIZE_QVGA_W;
-	d->vsize.height=MS_VIDEO_SIZE_QVGA_H;
-	d->fps=12;
-
-#endif
-	
-	ms_message("bitrate requested...: %d (%d x %d)\n", d->bitrate, d->vsize.width, d->vsize.height);
+	memcpy(&best_vconf, closer_to_best_vconf, sizeof(best_vconf));
+	best_vconf.bitrate = br;
+	enc_set_configuration(f, &best_vconf);
 	return 0;
 }
 
@@ -356,18 +361,27 @@ static int enc_req_vfu(MSFilter *f, void *arg){
 	return 0;
 }
 
+static int enc_get_configuration_list(MSFilter *f, void *data) {
+	const MSVideoConfiguration **vconf_list = (const MSVideoConfiguration **)data;
+	MS_UNUSED(f);
+	*vconf_list = &x264_conf_list[0];
+	return 0;
+}
 
-static MSFilterMethod enc_methods[]={
-	{	MS_FILTER_SET_FPS	,	enc_set_fps	},
-	{	MS_FILTER_SET_BITRATE	,	enc_set_br	},
-	{	MS_FILTER_GET_BITRATE	,	enc_get_br	},
-	{	MS_FILTER_GET_FPS	,	enc_get_fps	},
-	{	MS_FILTER_GET_VIDEO_SIZE,	enc_get_vsize	},
-	{	MS_FILTER_SET_VIDEO_SIZE,	enc_set_vsize	},
-	{	MS_FILTER_ADD_FMTP	,	enc_add_fmtp	},
-	{	MS_FILTER_REQ_VFU	,	enc_req_vfu	},
-	{	MS_VIDEO_ENCODER_REQ_VFU,	enc_req_vfu	},
-	{	0	,			NULL		}
+
+static MSFilterMethod enc_methods[] = {
+	{ MS_FILTER_SET_FPS,                       enc_set_fps                },
+	{ MS_FILTER_SET_BITRATE,                   enc_set_br                 },
+	{ MS_FILTER_GET_BITRATE,                   enc_get_br                 },
+	{ MS_FILTER_GET_FPS,                       enc_get_fps                },
+	{ MS_FILTER_GET_VIDEO_SIZE,                enc_get_vsize              },
+	{ MS_FILTER_SET_VIDEO_SIZE,                enc_set_vsize              },
+	{ MS_FILTER_ADD_FMTP,                      enc_add_fmtp               },
+	{ MS_FILTER_REQ_VFU,                       enc_req_vfu                },
+	{ MS_VIDEO_ENCODER_REQ_VFU,                enc_req_vfu                },
+	{ MS_VIDEO_ENCODER_GET_CONFIGURATION_LIST, enc_get_configuration_list },
+	{ MS_VIDEO_ENCODER_SET_CONFIGURATION,      enc_set_configuration      },
+	{ 0,                                       NULL                       }
 };
 
 #ifndef _MSC_VER
