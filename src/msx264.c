@@ -56,6 +56,25 @@ static const MSVideoConfiguration x264_conf_list[] = {
 #endif
 };
 
+static const MSVideoConfiguration multicore_x264_conf_list[] = {
+#if defined(ANDROID) || (TARGET_OS_IPHONE == 1)
+	MS_X264_CONF(2048000,       UXGA, 15),
+	MS_X264_CONF(1024000, SXGA_MINUS, 15),
+	MS_X264_CONF( 750000,        XGA, 15),
+	MS_X264_CONF( 500000,       SVGA, 15),
+	MS_X264_CONF( 300000,        VGA, 12),
+	MS_X264_CONF(      0,       QVGA, 12)
+#else
+	MS_X264_CONF(1024000, SVGA, 25),
+	MS_X264_CONF( 512000,  VGA, 25),
+	MS_X264_CONF( 256000,  VGA, 15),
+	MS_X264_CONF( 170000, QVGA, 15),
+	MS_X264_CONF( 128000, QCIF, 10),
+	MS_X264_CONF(  64000, QCIF,  7),
+	MS_X264_CONF(      0, QCIF,  5)
+#endif
+};
+
 
 /* the goal of this small object is to tell when to send I frames at startup:
 at 2 and 4 seconds*/
@@ -105,7 +124,7 @@ typedef struct _EncData{
 static void enc_init(MSFilter *f){
 	EncData *d=ms_new(EncData,1);
 	d->enc=NULL;
-    MS_VIDEO_SIZE_ASSIGN(d->vsize,CIF);
+	MS_VIDEO_SIZE_ASSIGN(d->vsize,CIF);
 	d->bitrate=384000;
 	d->fps=30;
 	d->keyframe_int=10; /*10 seconds */
@@ -242,7 +261,7 @@ static void enc_process(MSFilter *f){
 			xpic.img.plane[1]=pic.planes[1];
 			xpic.img.plane[2]=pic.planes[2];
 			xpic.img.plane[3]=0;
-            
+
 			if (x264_encoder_encode(d->enc,&xnals,&num_nals,&xpic,&oxpic)>=0){
 				x264_nals_to_msgb(xnals,num_nals,&nalus);
 				/*if (num_nals == 0)	ms_message("Delayed frames info: current=%d max=%d\n", 
@@ -300,10 +319,12 @@ static int enc_set_configuration(MSFilter *f, void *arg) {
 
 static int enc_set_br(MSFilter *f, void *arg) {
 	int br = *(int *)arg;
-	const MSVideoConfiguration *current_vconf = &x264_conf_list[0];
+	const MSVideoConfiguration *current_vconf;
 	const MSVideoConfiguration *closer_to_best_vconf = NULL;
 	MSVideoConfiguration best_vconf;
 
+	if (ms_get_cpu_count() > 1) current_vconf = &multicore_x264_conf_list[0];
+	else current_vconf = &x264_conf_list[0];
 	while (closer_to_best_vconf == NULL) {
 		if ((br >= current_vconf->bitrate) || (current_vconf->bitrate == 0)) {
 			closer_to_best_vconf = current_vconf;
@@ -364,7 +385,8 @@ static int enc_req_vfu(MSFilter *f, void *arg){
 static int enc_get_configuration_list(MSFilter *f, void *data) {
 	const MSVideoConfiguration **vconf_list = (const MSVideoConfiguration **)data;
 	MS_UNUSED(f);
-	*vconf_list = &x264_conf_list[0];
+	if (ms_get_cpu_count() > 1) *vconf_list = &multicore_x264_conf_list[0];
+	else *vconf_list = &x264_conf_list[0];
 	return 0;
 }
 
