@@ -40,10 +40,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 
 #define MS_X264_CONF(required_bitrate, bitrate_limit, resolution, fps) \
-	{ required_bitrate, bitrate_limit, MS_VIDEO_SIZE_ ## resolution, fps, NULL }
+	{ required_bitrate, bitrate_limit, { MS_VIDEO_SIZE_ ## resolution ## _W, MS_VIDEO_SIZE_ ## resolution ## _H }, fps, NULL }
 
 static const MSVideoConfiguration x264_conf_list[] = {
-#if defined(ANDROID) || (TARGET_OS_IPHONE == 1)
+#if defined(ANDROID) || (TARGET_OS_IPHONE == 1) || defined(__arm__)
 	MS_X264_CONF(0, 512000, QVGA, 12)
 #else
 	MS_X264_CONF(1024000, 1536000, SVGA, 25),
@@ -57,7 +57,7 @@ static const MSVideoConfiguration x264_conf_list[] = {
 };
 
 static const MSVideoConfiguration multicore_x264_conf_list[] = {
-#if defined(ANDROID) || (TARGET_OS_IPHONE == 1)
+#if defined(ANDROID) || (TARGET_OS_IPHONE == 1) || defined(__arm__)
 	MS_X264_CONF(2048000, 3072000,       UXGA, 15),
 	MS_X264_CONF(1024000, 1536000, SXGA_MINUS, 15),
 	MS_X264_CONF( 750000, 1024000,        XGA, 15),
