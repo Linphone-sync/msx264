@@ -163,7 +163,7 @@ static void enc_preprocess(MSFilter *f){
 	d->packer=rfc3984_new();
 	rfc3984_set_mode(d->packer,d->mode);
 	rfc3984_enable_stap_a(d->packer,FALSE);
-#ifdef __arm__	
+#if defined(__arm__) || defined(ANDROID)
 	if (x264_param_default_preset(params,"superfast"/*"ultrafast"*/,"zerolatency")) { 
 #else
 		x264_param_default(params); {
