@@ -321,6 +321,7 @@ static int enc_set_br(MSFilter *f, void *arg) {
 	if (d->enc != NULL) {
 		/* Encoding is already ongoing, do not change video size, only bitrate. */
 		d->vconf.required_bitrate = br;
+		enc_set_configuration(f,&d->vconf);
 	} else {
 		MSVideoConfiguration best_vconf = ms_video_find_best_configuration_for_bitrate(d->vconf_list, br);
 		enc_set_configuration(f, &best_vconf);
