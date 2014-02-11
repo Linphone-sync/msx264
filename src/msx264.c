@@ -116,9 +116,9 @@ typedef struct _EncData{
 	Rfc3984Context *packer;
 	int keyframe_int;
 	VideoStarter starter;
-	bool_t generate_keyframe;
 	const MSVideoConfiguration *vconf_list;
 	MSVideoConfiguration vconf;
+	bool_t generate_keyframe;
 }EncData;
 
 
@@ -229,6 +229,12 @@ static void enc_process(MSFilter *f){
 	mblk_t *im;
 	MSPicture pic;
 	MSQueue nalus;
+	
+	if (d->enc==NULL){
+		ms_queue_flush(f->inputs[0]);
+		return;
+	}
+	
 	ms_queue_init(&nalus);
 	while((im=ms_queue_get(f->inputs[0]))!=NULL){
 		if (ms_yuv_buf_init_from_mblk(&pic,im)==0){
