@@ -5,6 +5,8 @@ AM_INIT_AUTOMAKE([tar-ustar])
 
 AC_CANONICAL_SYSTEM
 
+AC_CONFIG_HEADERS(config.h)
+
 AC_MSG_CHECKING([warning make an error on compilation])
 AC_ARG_ENABLE(strict,
 [  --enable-strict       Enable error on compilation warning [default=yes]],
