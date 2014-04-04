@@ -17,3 +17,4 @@ missing
 *.o
 *.la
 INSTALL
+msx264.spec

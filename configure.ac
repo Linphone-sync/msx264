@@ -138,5 +138,6 @@ build/Makefile
 build/vs/Makefile
 src/Makefile
 msx264.iss
+msx264.spec
 )
 

@@ -1,0 +1,41 @@
+# -*- rpm-spec -*-
+
+## rpmbuild options
+
+Summary:	H264 codec plugin for mediastreamer2
+Name:	msx264
+Version:	@PACKAGE_VERSION@
+Release:	1
+License:	GPL
+Group:	Applications/Communications
+URL:	http://www.belledonne-communications.com
+BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
+Source0: 	%{name}-%{version}.tar.gz
+Requires: bash >= 2.0
+
+%description
+H264 codec plugin for mediastreamer2.
+
+%prep
+%setup -q
+
+%build
+%configure --enable-static
+%__make %{?_smp_mflags}
+
+%install
+rm -rf $RPM_BUILD_ROOT
+%makeinstall
+
+%clean
+rm -rf $RPM_BUILD_ROOT
+
+%files
+%defattr(-,root,root)
+%doc AUTHORS COPYING ChangeLog INSTALL NEWS README
+%{_libdir}/*
+
+%changelog
+* Mon Mar 24 2014 Margaux Clerc <margaux.clerc@belledonne-communications.com>
+- Initial specfile.
+

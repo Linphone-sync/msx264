@@ -1,8 +1,6 @@
-EXTRA_DIST=autogen.sh
+EXTRA_DIST=autogen.sh msx264.spec msx264.spec.in
 
 SUBDIRS=src build
-
-
 
 INSTALLDIR=$(shell cd $(top_builddir) && pwd)/$(PACKAGE)-install
 INSTALLDIR_WITH_PREFIX=$(INSTALLDIR)/$(prefix)
@@ -41,6 +39,11 @@ zip:
 	cp -f $(top_srcdir)/COPYING $(INSTALLDIR_WITH_PREFIX)/.
 	cd $(INSTALLDIR)/$(prefix) && rm -rf $(ZIP_EXCLUDED) && \
 	zip -r $(ZIPFILE) *
+
+rpm: 
+	$(MAKE) dist
+	TAR_OPTIONS=--wildcards rpmbuild -ta --clean --rmsource --rmspec $(PACKAGE)-$(VERSION).tar.gz
+
 
 clean-local:
 	-rm -rf $(PACKAGE)-install
