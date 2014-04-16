@@ -44,7 +44,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 static const MSVideoConfiguration x264_conf_list[] = {
 #if defined(ANDROID) || (TARGET_OS_IPHONE == 1) || defined(__arm__)
-	MS_X264_CONF(0, 512000, QVGA, 12)
+	MS_X264_CONF( 170000, 512000,  QVGA, 12),
+	MS_X264_CONF( 128000,  170000, QCIF, 10),
+	MS_X264_CONF(  64000,  128000, QCIF,  7),
+	MS_X264_CONF(      0,   64000, QCIF,  5)
 #else
 	MS_X264_CONF(1024000, 1536000, SVGA, 25),
 	MS_X264_CONF( 512000, 1024000,  VGA, 25),
@@ -63,7 +66,10 @@ static const MSVideoConfiguration multicore_x264_conf_list[] = {
 	MS_X264_CONF( 750000, 1024000,        XGA, 15),
 	MS_X264_CONF( 500000,  750000,       SVGA, 15),
 	MS_X264_CONF( 300000,  500000,        VGA, 12),
-	MS_X264_CONF(      0,  300000,       QVGA, 12)
+	MS_X264_CONF( 170000,  300000,       QVGA, 12),
+	MS_X264_CONF( 128000,   170000,      QCIF, 10),
+	MS_X264_CONF(  64000,   128000,      QCIF,  7),
+	MS_X264_CONF(      0,    64000,      QCIF,  5)
 #else
 	MS_X264_CONF(1536000,  2560000, SXGA_MINUS, 15),
 	MS_X264_CONF(1536000,  2560000,       720P, 15),
