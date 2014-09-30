@@ -39,47 +39,31 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define SPECIAL_HIGHRES_BUILD_CRF 28
 
 
-#define MS_X264_CONF(required_bitrate, bitrate_limit, resolution, fps) \
-	{ required_bitrate, bitrate_limit, { MS_VIDEO_SIZE_ ## resolution ## _W, MS_VIDEO_SIZE_ ## resolution ## _H }, fps, NULL }
+#define MS_X264_CONF(required_bitrate, bitrate_limit, resolution, fps, ncpus) \
+	{ required_bitrate, bitrate_limit, { MS_VIDEO_SIZE_ ## resolution ## _W, MS_VIDEO_SIZE_ ## resolution ## _H }, fps, ncpus, NULL }
+
 
 static const MSVideoConfiguration x264_conf_list[] = {
 #if defined(ANDROID) || (TARGET_OS_IPHONE == 1) || defined(__arm__)
-	MS_X264_CONF( 170000, 512000,  QVGA, 12),
-	MS_X264_CONF( 128000,  170000, QCIF, 10),
-	MS_X264_CONF(  64000,  128000, QCIF,  7),
-	MS_X264_CONF(      0,   64000, QCIF,  5)
+	MS_X264_CONF(2048000, 3072000,       UXGA, 15, 4),
+	MS_X264_CONF(1024000, 1536000, SXGA_MINUS, 15, 4),
+	MS_X264_CONF( 750000, 1024000,        XGA, 15, 4),
+	MS_X264_CONF( 500000,  750000,       SVGA, 15, 2),
+	MS_X264_CONF( 300000,  500000,        VGA, 12, 1),
+	MS_X264_CONF( 170000,  300000,       QVGA, 12, 1),
+	MS_X264_CONF( 128000,   170000,      QCIF, 10, 1),
+	MS_X264_CONF(  64000,   128000,      QCIF,  7, 1),
+	MS_X264_CONF(      0,    64000,      QCIF,  5 ,1)
 #else
-	MS_X264_CONF(1024000, 1536000, SVGA, 25),
-	MS_X264_CONF( 512000, 1024000,  VGA, 25),
-	MS_X264_CONF( 256000,  512000,  VGA, 15),
-	MS_X264_CONF( 170000,  256000, QVGA, 15),
-	MS_X264_CONF( 128000,  170000, QCIF, 10),
-	MS_X264_CONF(  64000,  128000, QCIF,  7),
-	MS_X264_CONF(      0,   64000, QCIF,  5)
-#endif
-};
-
-static const MSVideoConfiguration multicore_x264_conf_list[] = {
-#if defined(ANDROID) || (TARGET_OS_IPHONE == 1) || defined(__arm__)
-	MS_X264_CONF(2048000, 3072000,       UXGA, 15),
-	MS_X264_CONF(1024000, 1536000, SXGA_MINUS, 15),
-	MS_X264_CONF( 750000, 1024000,        XGA, 15),
-	MS_X264_CONF( 500000,  750000,       SVGA, 15),
-	MS_X264_CONF( 300000,  500000,        VGA, 12),
-	MS_X264_CONF( 170000,  300000,       QVGA, 12),
-	MS_X264_CONF( 128000,   170000,      QCIF, 10),
-	MS_X264_CONF(  64000,   128000,      QCIF,  7),
-	MS_X264_CONF(      0,    64000,      QCIF,  5)
-#else
-	MS_X264_CONF(1536000,  2560000, SXGA_MINUS, 15),
-	MS_X264_CONF(1536000,  2560000,       720P, 15),
-	MS_X264_CONF(1024000,  1536000,        XGA, 15),
-	MS_X264_CONF( 512000,  1024000,       SVGA, 15),
-	MS_X264_CONF( 256000,   512000,        VGA, 15),
-	MS_X264_CONF( 170000,   256000,       QVGA, 15),
-	MS_X264_CONF( 128000,   170000,       QCIF, 10),
-	MS_X264_CONF(  64000,   128000,       QCIF,  7),
-	MS_X264_CONF(      0,    64000,       QCIF,  5)
+	MS_X264_CONF(1536000,  2560000, SXGA_MINUS, 18, 4),
+	MS_X264_CONF(1536000,  2560000,       720P, 18, 4),
+	MS_X264_CONF(1024000,  1536000,        XGA, 18, 4),
+	MS_X264_CONF( 512000,  1024000,       SVGA, 18, 2),
+	MS_X264_CONF( 256000,   512000,        VGA, 15, 1),
+	MS_X264_CONF( 170000,   256000,       QVGA, 15, 1),
+	MS_X264_CONF( 128000,   170000,       QCIF, 10, 1),
+	MS_X264_CONF(  64000,   128000,       QCIF,  7, 1),
+	MS_X264_CONF(      0,    64000,       QCIF,  5, 1)
 #endif
 };
 
@@ -136,9 +120,7 @@ static void enc_init(MSFilter *f){
 	d->framenum=0;
 	d->generate_keyframe=FALSE;
 	d->packer=NULL;
-	if (ms_get_cpu_count() > 1) d->vconf_list = &multicore_x264_conf_list[0];
-	else d->vconf_list = &x264_conf_list[0];
-	d->vconf = ms_video_find_best_configuration_for_bitrate(d->vconf_list, 384000);
+	d->vconf = ms_video_find_best_configuration_for_bitrate(d->vconf_list, 384000, ms_get_cpu_count());
 	f->data=d;
 }
 
@@ -337,7 +319,7 @@ static int enc_set_br(MSFilter *f, void *arg) {
 		d->vconf.required_bitrate = br;
 		enc_set_configuration(f,&d->vconf);
 	} else {
-		MSVideoConfiguration best_vconf = ms_video_find_best_configuration_for_bitrate(d->vconf_list, br);
+		MSVideoConfiguration best_vconf = ms_video_find_best_configuration_for_bitrate(d->vconf_list, br, ms_get_cpu_count());
 		enc_set_configuration(f, &best_vconf);
 	}
 	return 0;
@@ -366,7 +348,7 @@ static int enc_set_vsize(MSFilter *f, void *arg){
 	MSVideoConfiguration best_vconf;
 	EncData *d = (EncData *)f->data;
 	MSVideoSize *vs = (MSVideoSize *)arg;
-	best_vconf = ms_video_find_best_configuration_for_size(d->vconf_list, *vs);
+	best_vconf = ms_video_find_best_configuration_for_size(d->vconf_list, *vs, ms_get_cpu_count());
 	d->vconf.vsize = *vs;
 	d->vconf.fps = best_vconf.fps;
 	d->vconf.bitrate_limit = best_vconf.bitrate_limit;
