@@ -120,6 +120,7 @@ static void enc_init(MSFilter *f){
 	d->framenum=0;
 	d->generate_keyframe=FALSE;
 	d->packer=NULL;
+	d->vconf_list=x264_conf_list;
 	d->vconf = ms_video_find_best_configuration_for_bitrate(d->vconf_list, 384000, ms_get_cpu_count());
 	f->data=d;
 }
