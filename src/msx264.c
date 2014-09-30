@@ -155,12 +155,12 @@ static void enc_preprocess(MSFilter *f){
 	rfc3984_set_mode(d->packer,d->mode);
 	rfc3984_enable_stap_a(d->packer,FALSE);
 #if defined(__arm__) || defined(ANDROID)
-	if (x264_param_default_preset(params,"superfast"/*"ultrafast"*/,"zerolatency")) { 
-#else
-		x264_param_default(params); {
-#endif
+	if (x264_param_default_preset(params,"superfast"/*"ultrafast"*/,"zerolatency")) {
 		ms_error("Cannot apply default x264 configuration");
-	};
+	}
+#else
+	x264_param_default(params);
+#endif
 	
 	params->i_threads=ms_get_cpu_count();
 	params->i_sync_lookahead=0;
